@@ -148,26 +148,28 @@ export function ConversationLogsPanel() {
       </div>
 
       {isLoading ? (
-        <div className='rounded-xl border p-6 text-sm'>{t('Loading...')}</div>
+        <div className='bg-card/80 rounded-2xl border p-6 text-sm shadow-sm backdrop-blur-sm'>
+          {t('Loading...')}
+        </div>
       ) : groupedItems.length === 0 ? (
-        <div className='rounded-xl border p-6 text-sm text-muted-foreground'>
+        <div className='bg-card/80 rounded-2xl border p-6 text-sm text-muted-foreground shadow-sm backdrop-blur-sm'>
           {t('No conversation logs found for current filters.')}
         </div>
       ) : (
         groupedItems.map((userGroup) => (
-          <div key={userGroup.user} className='rounded-xl border bg-card p-4 shadow-sm'>
-            <div className='mb-3 text-sm font-semibold'>
+          <div key={userGroup.user} className='bg-card/90 rounded-2xl border p-4 shadow-sm backdrop-blur-sm'>
+            <div className='mb-3 text-sm font-semibold tracking-wide'>
               {t('User')}: {userGroup.user}
             </div>
             <div className='space-y-3'>
               {userGroup.tokens.map((tokenGroup) => (
-                <div key={`${userGroup.user}-${tokenGroup.token}`} className='rounded-lg border p-3'>
+                <div key={`${userGroup.user}-${tokenGroup.token}`} className='bg-background/70 rounded-xl border p-3'>
                   <div className='mb-2 text-xs font-medium text-muted-foreground'>
                     {t('Key')}: {tokenGroup.token} ({tokenGroup.logs.length} {t('records')})
                   </div>
                   <div className='space-y-2'>
                     {tokenGroup.logs.map((item) => (
-                      <details key={item.id} className='rounded-md border bg-muted/20 p-2'>
+                      <details key={item.id} className='bg-card rounded-lg border p-2.5 shadow-xs'>
                         <summary className='cursor-pointer text-xs text-muted-foreground'>
                           #{item.id} · {formatLogTime(item.created_at)} · {item.model_name || '-'}
                         </summary>

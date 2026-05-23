@@ -31,6 +31,8 @@ const defaultSiteSettings: SiteSettings = {
   Footer: '',
   About: '',
   HomePageContent: '',
+  EnableCustomBackground: false,
+  CustomBackgroundURL: '',
   ServerAddress: '',
   'legal.user_agreement': '',
   'legal.privacy_policy': '',
