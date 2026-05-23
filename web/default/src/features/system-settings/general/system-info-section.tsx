@@ -62,7 +62,16 @@ const _systemInfoSchema = z.object({
   About: z.string().optional(),
   HomePageContent: z.string().optional(),
   EnableCustomBackground: z.boolean(),
-  CustomBackgroundURL: z.string().url().optional().or(z.literal('')),
+  CustomBackgroundURL: z
+    .string()
+    .refine(
+      (value) =>
+        value === '' || value.startsWith('/') || /^https?:\/\//.test(value),
+      {
+        message:
+          'Background URL must be an absolute URL or a relative path starting with /',
+      }
+    ),
   legal: z.object({
     user_agreement: z.string().optional(),
     privacy_policy: z.string().optional(),
@@ -117,7 +126,17 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     About: z.string().optional(),
     HomePageContent: z.string().optional(),
     EnableCustomBackground: z.boolean(),
-    CustomBackgroundURL: z.string().url().optional().or(z.literal('')),
+    CustomBackgroundURL: z
+      .string()
+      .refine(
+        (value) =>
+          value === '' || value.startsWith('/') || /^https?:\/\//.test(value),
+        {
+          message: t(
+            'Background URL must be an absolute URL or a relative path starting with /'
+          ),
+        }
+      ),
     legal: z.object({
       user_agreement: z.string().optional(),
       privacy_policy: z.string().optional(),

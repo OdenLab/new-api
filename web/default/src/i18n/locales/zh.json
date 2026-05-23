@@ -4500,6 +4500,7 @@
     "When enabled, response text is checked against regex rules and blocked once matched.": "启用后，响应文本会按正则规则检查，命中后立即拦截。",
     "Enable conversation history logs": "启用对话历史日志",
     "Stores prompt/response history for admin conversation log review.": "保存提示词/响应历史，供管理员在对话日志中审计查看。",
-    "Log workspace": "日志工作台"
+    "Log workspace": "日志工作台",
+    "Background URL must be an absolute URL or a relative path starting with /": "背景图链接必须是完整 URL，或以 / 开头的相对路径"
   }
 }

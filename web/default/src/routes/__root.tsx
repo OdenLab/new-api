@@ -57,7 +57,7 @@ function RootComponent() {
     <ThemeCustomizationProvider>
       <div className='relative min-h-svh'>
         {showGlobalBackground && (
-          <div className='pointer-events-none fixed inset-0 -z-10'>
+          <div className='pointer-events-none fixed inset-0 z-0'>
             <img
               src={bgImageUrl}
               alt='global background'
@@ -68,8 +68,10 @@ function RootComponent() {
             <div className='from-background/72 via-background/58 to-background/72 absolute inset-0 bg-linear-to-br md:from-background/64 md:via-background/50 md:to-background/68' />
           </div>
         )}
-        <NavigationProgress />
-        <Outlet />
+        <div className='relative z-10'>
+          <NavigationProgress />
+          <Outlet />
+        </div>
       </div>
       <Toaster duration={5000} />
       {import.meta.env.MODE === 'development' && (
