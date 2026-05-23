@@ -17,9 +17,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { z } from 'zod'
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth-store'
 import { SignIn } from '@/features/auth/sign-in'
+import { getSelf } from '@/lib/api'
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
@@ -28,14 +29,18 @@ const searchSchema = z.object({
 export const Route = createFileRoute('/(auth)/sign-in')({
   component: SignIn,
   validateSearch: searchSchema,
-  beforeLoad: async ({ search }) => {
+  beforeLoad: async () => {
     const { auth } = useAuthStore.getState()
 
-    // 如果已经有用户信息，说明已登录
+    // 不再在打开登录页时强制自动跳转，避免用户尚未访问受保护页面时被动跳转。
+    // 仅在本地存在用户信息时做一次轻量校验：若会话已失效则清理状态，保持在登录页。
     if (auth.user) {
-      // 优先使用 redirect 参数（用户之前想去的地方）
-      // 否则跳转到 dashboard
-      throw redirect({ to: search?.redirect || '/dashboard' })
+      const res = await getSelf().catch(() => null)
+      if (!res?.success || !res.data) {
+        auth.reset()
+      } else {
+        auth.setUser(res.data)
+      }
     }
   },
 })
