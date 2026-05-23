@@ -27,6 +27,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { ThemeCustomizationProvider } from '@/context/theme-customization-provider'
 import { useSystemConfig } from '@/hooks/use-system-config'
+import { useStatus } from '@/hooks/use-status'
 import { Toaster } from '@/components/ui/sonner'
 import { NavigationProgress } from '@/components/navigation-progress'
 import { GeneralError } from '@/features/errors/general-error'
@@ -37,6 +38,13 @@ import { saveAffiliateCode } from '@/features/auth/lib/storage'
 function RootComponent() {
   // Load system configuration (logo, system name, etc.) from backend
   useSystemConfig({ autoLoad: true })
+  const { status } = useStatus()
+  const bgEnabled = status?.enable_custom_background === true
+  const bgImageUrl =
+    typeof status?.custom_background_url === 'string'
+      ? status.custom_background_url.trim()
+      : ''
+  const showGlobalBackground = bgEnabled && bgImageUrl.length > 0
 
   useEffect(() => {
     const aff = new URLSearchParams(window.location.search).get('aff')?.trim()
@@ -47,8 +55,24 @@ function RootComponent() {
 
   return (
     <ThemeCustomizationProvider>
-      <NavigationProgress />
-      <Outlet />
+      <div className='relative min-h-svh'>
+        {showGlobalBackground && (
+          <div className='pointer-events-none fixed inset-0 z-0'>
+            <img
+              src={bgImageUrl}
+              alt='global background'
+              className='h-full w-full object-cover'
+              loading='eager'
+              decoding='async'
+            />
+            <div className='from-background/72 via-background/58 to-background/72 absolute inset-0 bg-linear-to-br md:from-background/64 md:via-background/50 md:to-background/68' />
+          </div>
+        )}
+        <div className='relative z-10'>
+          <NavigationProgress />
+          <Outlet />
+        </div>
+      </div>
       <Toaster duration={5000} />
       {import.meta.env.MODE === 'development' && (
         <>
