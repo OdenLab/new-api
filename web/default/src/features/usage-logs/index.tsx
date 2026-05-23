@@ -149,9 +149,13 @@ function UsageLogsContent() {
           <div className='space-y-4'>
             {showSectionSwitcher && (
               <Tabs value={activeCategory} onValueChange={handleSectionChange}>
-                <TabsList className='group-data-horizontal/tabs:h-auto max-w-full flex-wrap justify-start'>
+                <TabsList className='bg-muted/60 group-data-horizontal/tabs:h-auto max-w-full flex-wrap justify-start rounded-xl border p-1 shadow-sm backdrop-blur-sm'>
                   {visibleSections.map((section) => (
-                    <TabsTrigger key={section} value={section}>
+                    <TabsTrigger
+                      key={section}
+                      value={section}
+                      className='data-[state=active]:shadow-xs rounded-lg'
+                    >
                       {t(SECTION_META[section].titleKey)}
                     </TabsTrigger>
                   ))}

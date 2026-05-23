@@ -4492,6 +4492,13 @@
     "Zhipu V4": "智谱 V4",
     "Zoom": "缩放",
     "Enable custom background": "启用自定义背景",
-    "Use a public image URL as the sign-in page background": "将公开图片链接用作登录页背景"
+    "Use a public image URL as the sign-in page background": "将公开图片链接用作登录页背景",
+    "Only jpg/png/webp files are supported": "仅支持 jpg/png/webp 文件",
+    "Upload background image": "上传背景图",
+    "Background uploaded successfully": "背景图上传成功",
+    "Inspect model outputs": "检查模型输出",
+    "When enabled, response text is checked against regex rules and blocked once matched.": "启用后，响应文本会按正则规则检查，命中后立即拦截。",
+    "Enable conversation history logs": "启用对话历史日志",
+    "Stores prompt/response history for admin conversation log review.": "保存提示词/响应历史，供管理员在对话日志中审计查看。"
   }
 }

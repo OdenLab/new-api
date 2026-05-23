@@ -20,7 +20,9 @@ import * as z from 'zod'
 import type { Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { RotateCcw } from 'lucide-react'
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -47,6 +49,7 @@ import { FormNavigationGuard } from '../components/form-navigation-guard'
 import { SettingsSection } from '../components/settings-section'
 import { useSettingsForm } from '../hooks/use-settings-form'
 import { useUpdateOption } from '../hooks/use-update-option'
+import { api } from '@/lib/api'
 
 const _systemInfoSchema = z.object({
   theme: z.object({
@@ -80,6 +83,7 @@ function normalizeValue(value: unknown): string {
 export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
+  const uploadInputRef = useRef<HTMLInputElement | null>(null)
 
   const normalizedDefaults: SystemInfoFormValues = {
     theme: {
@@ -141,6 +145,33 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
         }
       },
     })
+
+  async function handleBackgroundUpload(file: File) {
+    const fileName = file.name.toLowerCase()
+    if (
+      !fileName.endsWith('.jpg') &&
+      !fileName.endsWith('.jpeg') &&
+      !fileName.endsWith('.png') &&
+      !fileName.endsWith('.webp')
+    ) {
+      toast.error(t('Only jpg/png/webp files are supported'))
+      return
+    }
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await api.post('/api/option/background/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    if (!res.data?.success || !res.data?.data?.url) {
+      toast.error(res.data?.message || t('Upload failed'))
+      return
+    }
+    const url = String(res.data.data.url)
+    form.setValue('CustomBackgroundURL', url, { shouldDirty: true })
+    toast.success(t('Background uploaded successfully'))
+  }
 
   return (
     <>
@@ -290,6 +321,28 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
                       'Supports jpg/png/webp. Use a public URL accessible without login.'
                     )}
                   </FormDescription>
+                  <div className='mt-2 flex items-center gap-2'>
+                    <input
+                      ref={uploadInputRef}
+                      type='file'
+                      accept='.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'
+                      className='hidden'
+                      onChange={(event) => {
+                        const selectedFile = event.target.files?.[0]
+                        if (selectedFile) {
+                          void handleBackgroundUpload(selectedFile)
+                        }
+                        event.target.value = ''
+                      }}
+                    />
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={() => uploadInputRef.current?.click()}
+                    >
+                      {t('Upload background image')}
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
