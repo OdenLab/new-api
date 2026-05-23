@@ -41,6 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
 import { FormNavigationGuard } from '../components/form-navigation-guard'
 import { SettingsSection } from '../components/settings-section'
@@ -57,6 +58,8 @@ const _systemInfoSchema = z.object({
   Footer: z.string().optional(),
   About: z.string().optional(),
   HomePageContent: z.string().optional(),
+  EnableCustomBackground: z.boolean(),
+  CustomBackgroundURL: z.string().url().optional().or(z.literal('')),
   legal: z.object({
     user_agreement: z.string().optional(),
     privacy_policy: z.string().optional(),
@@ -89,6 +92,8 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     Footer: normalizeValue(defaultValues.Footer),
     About: normalizeValue(defaultValues.About),
     HomePageContent: normalizeValue(defaultValues.HomePageContent),
+    EnableCustomBackground: Boolean(defaultValues.EnableCustomBackground),
+    CustomBackgroundURL: normalizeValue(defaultValues.CustomBackgroundURL),
     legal: {
       user_agreement: normalizeValue(defaultValues.legal?.user_agreement),
       privacy_policy: normalizeValue(defaultValues.legal?.privacy_policy),
@@ -107,6 +112,8 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     Footer: z.string().optional(),
     About: z.string().optional(),
     HomePageContent: z.string().optional(),
+    EnableCustomBackground: z.boolean(),
+    CustomBackgroundURL: z.string().url().optional().or(z.literal('')),
     legal: z.object({
       user_agreement: z.string().optional(),
       privacy_policy: z.string().optional(),
@@ -239,6 +246,49 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
                   </FormControl>
                   <FormDescription>
                     {t('URL to your logo image (optional)')}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='EnableCustomBackground'
+              render={({ field }) => (
+                <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
+                  <div className='space-y-0.5'>
+                    <FormLabel>{t('Enable custom background')}</FormLabel>
+                    <FormDescription>
+                      {t('Use a public image URL as the sign-in page background')}
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='CustomBackgroundURL'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Custom background URL')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={t('https://example.com/background.webp')}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Supports jpg/png/webp. Use a public URL accessible without login.'
+                    )}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

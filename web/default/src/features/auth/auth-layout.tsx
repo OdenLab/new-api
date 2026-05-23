@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useSystemConfig } from '@/hooks/use-system-config'
+import { useStatus } from '@/hooks/use-status'
 import { Skeleton } from '@/components/ui/skeleton'
 
 type AuthLayoutProps = {
@@ -28,12 +29,31 @@ type AuthLayoutProps = {
 export function AuthLayout({ children }: AuthLayoutProps) {
   const { t } = useTranslation()
   const { systemName, logo, loading } = useSystemConfig()
+  const { status } = useStatus()
+  const bgEnabled = status?.enable_custom_background === true
+  const bgImageUrl =
+    typeof status?.custom_background_url === 'string'
+      ? status.custom_background_url.trim()
+      : ''
+  const showCustomBackground = bgEnabled && bgImageUrl.length > 0
 
   return (
-    <div className='relative grid h-svh max-w-none'>
+    <div className='relative grid h-svh max-w-none overflow-hidden'>
+      {showCustomBackground && (
+        <>
+          <img
+            src={bgImageUrl}
+            alt={t('Custom background image')}
+            className='absolute inset-0 h-full w-full object-cover'
+            loading='eager'
+            decoding='async'
+          />
+          <div className='from-background/72 via-background/55 to-background/78 absolute inset-0 bg-linear-to-b sm:from-background/70 sm:to-background/72' />
+        </>
+      )}
       <Link
         to='/'
-        className='absolute top-4 left-4 z-10 flex items-center gap-2 transition-opacity hover:opacity-80 sm:top-8 sm:left-8'
+        className='absolute top-4 left-4 z-20 flex items-center gap-2 transition-opacity hover:opacity-80 sm:top-8 sm:left-8'
       >
         <div className='relative h-8 w-8'>
           {loading ? (
@@ -52,8 +72,8 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           <h1 className='text-xl font-medium'>{systemName}</h1>
         )}
       </Link>
-      <div className='container flex items-center pt-16 sm:pt-0'>
-        <div className='mx-auto flex w-full flex-col justify-center space-y-2 px-4 py-8 sm:w-[480px] sm:p-8'>
+      <div className='container relative z-10 flex items-center pt-16 sm:pt-0'>
+        <div className='bg-background/78 border-border/55 shadow-primary/5 mx-auto flex w-full flex-col justify-center space-y-2 rounded-2xl border px-4 py-8 shadow-xl backdrop-blur-md sm:w-[480px] sm:p-8'>
           {children}
         </div>
       </div>
