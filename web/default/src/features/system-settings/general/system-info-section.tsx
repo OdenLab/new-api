@@ -20,7 +20,9 @@ import * as z from 'zod'
 import type { Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { RotateCcw } from 'lucide-react'
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -41,11 +43,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
 import { FormNavigationGuard } from '../components/form-navigation-guard'
 import { SettingsSection } from '../components/settings-section'
 import { useSettingsForm } from '../hooks/use-settings-form'
 import { useUpdateOption } from '../hooks/use-update-option'
+import { api } from '@/lib/api'
 
 const _systemInfoSchema = z.object({
   theme: z.object({
@@ -57,6 +61,8 @@ const _systemInfoSchema = z.object({
   Footer: z.string().optional(),
   About: z.string().optional(),
   HomePageContent: z.string().optional(),
+  EnableCustomBackground: z.boolean(),
+  CustomBackgroundURL: z.string().url().optional().or(z.literal('')),
   legal: z.object({
     user_agreement: z.string().optional(),
     privacy_policy: z.string().optional(),
@@ -77,6 +83,7 @@ function normalizeValue(value: unknown): string {
 export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
+  const uploadInputRef = useRef<HTMLInputElement | null>(null)
 
   const normalizedDefaults: SystemInfoFormValues = {
     theme: {
@@ -89,6 +96,8 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     Footer: normalizeValue(defaultValues.Footer),
     About: normalizeValue(defaultValues.About),
     HomePageContent: normalizeValue(defaultValues.HomePageContent),
+    EnableCustomBackground: Boolean(defaultValues.EnableCustomBackground),
+    CustomBackgroundURL: normalizeValue(defaultValues.CustomBackgroundURL),
     legal: {
       user_agreement: normalizeValue(defaultValues.legal?.user_agreement),
       privacy_policy: normalizeValue(defaultValues.legal?.privacy_policy),
@@ -107,6 +116,8 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
     Footer: z.string().optional(),
     About: z.string().optional(),
     HomePageContent: z.string().optional(),
+    EnableCustomBackground: z.boolean(),
+    CustomBackgroundURL: z.string().url().optional().or(z.literal('')),
     legal: z.object({
       user_agreement: z.string().optional(),
       privacy_policy: z.string().optional(),
@@ -134,6 +145,33 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
         }
       },
     })
+
+  async function handleBackgroundUpload(file: File) {
+    const fileName = file.name.toLowerCase()
+    if (
+      !fileName.endsWith('.jpg') &&
+      !fileName.endsWith('.jpeg') &&
+      !fileName.endsWith('.png') &&
+      !fileName.endsWith('.webp')
+    ) {
+      toast.error(t('Only jpg/png/webp files are supported'))
+      return
+    }
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await api.post('/api/option/background/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    if (!res.data?.success || !res.data?.data?.url) {
+      toast.error(res.data?.message || t('Upload failed'))
+      return
+    }
+    const url = String(res.data.data.url)
+    form.setValue('CustomBackgroundURL', url, { shouldDirty: true })
+    toast.success(t('Background uploaded successfully'))
+  }
 
   return (
     <>
@@ -240,6 +278,71 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
                   <FormDescription>
                     {t('URL to your logo image (optional)')}
                   </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='EnableCustomBackground'
+              render={({ field }) => (
+                <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
+                  <div className='space-y-0.5'>
+                    <FormLabel>{t('Enable custom background')}</FormLabel>
+                    <FormDescription>
+                      {t('Use a public image URL as the sign-in page background')}
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='CustomBackgroundURL'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Custom background URL')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder={t('https://example.com/background.webp')}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Supports jpg/png/webp. Use a public URL accessible without login.'
+                    )}
+                  </FormDescription>
+                  <div className='mt-2 flex items-center gap-2'>
+                    <input
+                      ref={uploadInputRef}
+                      type='file'
+                      accept='.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'
+                      className='hidden'
+                      onChange={(event) => {
+                        const selectedFile = event.target.files?.[0]
+                        if (selectedFile) {
+                          void handleBackgroundUpload(selectedFile)
+                        }
+                        event.target.value = ''
+                      }}
+                    />
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={() => uploadInputRef.current?.click()}
+                    >
+                      {t('Upload background image')}
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
