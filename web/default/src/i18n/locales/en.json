@@ -4495,6 +4495,7 @@
     "Use a public image URL as the sign-in page background": "Use a public image URL as the sign-in page background",
     "Only jpg/png/webp files are supported": "Only jpg/png/webp files are supported",
     "Upload background image": "Upload background image",
-    "Background uploaded successfully": "Background uploaded successfully"
+    "Background uploaded successfully": "Background uploaded successfully",
+    "Log workspace": "Log workspace"
   }
 }

@@ -4499,6 +4499,7 @@
     "Inspect model outputs": "检查模型输出",
     "When enabled, response text is checked against regex rules and blocked once matched.": "启用后，响应文本会按正则规则检查，命中后立即拦截。",
     "Enable conversation history logs": "启用对话历史日志",
-    "Stores prompt/response history for admin conversation log review.": "保存提示词/响应历史，供管理员在对话日志中审计查看。"
+    "Stores prompt/response history for admin conversation log review.": "保存提示词/响应历史，供管理员在对话日志中审计查看。",
+    "Log workspace": "日志工作台"
   }
 }
