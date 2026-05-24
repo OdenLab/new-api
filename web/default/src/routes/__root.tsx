@@ -53,6 +53,22 @@ function RootComponent() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!showGlobalBackground) {
+      document.body.style.backgroundImage = ''
+      document.body.style.backgroundSize = ''
+      document.body.style.backgroundPosition = ''
+      document.body.style.backgroundRepeat = ''
+      document.body.style.backgroundAttachment = ''
+      return
+    }
+    document.body.style.backgroundImage = `url("${bgImageUrl}")`
+    document.body.style.backgroundSize = 'cover'
+    document.body.style.backgroundPosition = 'center center'
+    document.body.style.backgroundRepeat = 'no-repeat'
+    document.body.style.backgroundAttachment = 'fixed'
+  }, [bgImageUrl, showGlobalBackground])
+
   return (
     <ThemeCustomizationProvider>
       <div className='relative min-h-svh'>
