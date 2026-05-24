@@ -134,6 +134,8 @@ var LinuxDOMinimumTrustLevel = 0
 var WeChatServerAddress = ""
 var WeChatServerToken = ""
 var WeChatAccountQRCodeImageURL = ""
+var EnableCustomBackground = false
+var CustomBackgroundURL = ""
 
 var TurnstileSiteKey = ""
 var TurnstileSecretKey = ""

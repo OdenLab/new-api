@@ -45,6 +45,8 @@ const SITE_SECTIONS = [
           Footer: settings.Footer,
           About: settings.About,
           HomePageContent: settings.HomePageContent,
+          EnableCustomBackground: settings.EnableCustomBackground,
+          CustomBackgroundURL: settings.CustomBackgroundURL,
           ServerAddress: settings.ServerAddress,
           legal: {
             user_agreement: settings['legal.user_agreement'],

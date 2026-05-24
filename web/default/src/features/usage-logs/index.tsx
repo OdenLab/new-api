@@ -147,17 +147,26 @@ function UsageLogsContent() {
         </SectionPageLayout.Description>
         <SectionPageLayout.Content>
           <div className='space-y-4'>
+            <div className='from-background/70 to-background/55 rounded-2xl border bg-linear-to-br p-3 shadow-sm backdrop-blur-md'>
+              <div className='text-muted-foreground mb-2 text-xs font-medium tracking-wide'>
+                {t('Log workspace')}
+              </div>
             {showSectionSwitcher && (
               <Tabs value={activeCategory} onValueChange={handleSectionChange}>
-                <TabsList className='group-data-horizontal/tabs:h-auto max-w-full flex-wrap justify-start'>
+                <TabsList className='bg-muted/60 group-data-horizontal/tabs:h-auto max-w-full flex-wrap justify-start rounded-xl border p-1 shadow-sm backdrop-blur-sm'>
                   {visibleSections.map((section) => (
-                    <TabsTrigger key={section} value={section}>
+                    <TabsTrigger
+                      key={section}
+                      value={section}
+                      className='data-[state=active]:shadow-xs rounded-lg'
+                    >
                       {t(SECTION_META[section].titleKey)}
                     </TabsTrigger>
                   ))}
                 </TabsList>
               </Tabs>
             )}
+            </div>
             {activeCategory === 'conversation' ? (
               <ConversationLogsPanel />
             ) : (
