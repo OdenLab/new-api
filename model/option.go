@@ -130,6 +130,8 @@ func InitOptionMap() {
 	common.OptionMap["WeChatServerAddress"] = ""
 	common.OptionMap["WeChatServerToken"] = ""
 	common.OptionMap["WeChatAccountQRCodeImageURL"] = ""
+	common.OptionMap["EnableCustomBackground"] = strconv.FormatBool(common.EnableCustomBackground)
+	common.OptionMap["CustomBackgroundURL"] = common.CustomBackgroundURL
 	common.OptionMap["TurnstileSiteKey"] = ""
 	common.OptionMap["TurnstileSecretKey"] = ""
 	common.OptionMap["QuotaForNewUser"] = strconv.Itoa(common.QuotaForNewUser)
@@ -336,6 +338,8 @@ func updateOptionMap(key string, value string) (err error) {
 			setting.DefaultUseAutoGroup = boolValue
 		case "ExposeRatioEnabled":
 			ratio_setting.SetExposeRatioEnabled(boolValue)
+		case "EnableCustomBackground":
+			common.EnableCustomBackground = boolValue
 		}
 	}
 	switch key {
@@ -358,6 +362,8 @@ func updateOptionMap(key string, value string) (err error) {
 		system_setting.WorkerUrl = value
 	case "WorkerValidKey":
 		system_setting.WorkerValidKey = value
+	case "CustomBackgroundURL":
+		common.CustomBackgroundURL = strings.TrimSpace(value)
 	case "PayAddress":
 		operation_setting.PayAddress = value
 	case "Chats":
