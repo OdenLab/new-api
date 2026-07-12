@@ -48,7 +48,7 @@ func InitResumeDB() error {
 		}
 		RESUME_DB = db
 	} else {
-		db, err := chooseDB("RESUME_SQL_DSN", true)
+		db, _, err := chooseDB("RESUME_SQL_DSN", true)
 		if err != nil {
 			return err
 		}

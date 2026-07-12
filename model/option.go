@@ -12,6 +12,7 @@ import (
 	"github.com/QuantumNous/new-api/setting/performance_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/QuantumNous/new-api/setting/system_setting"
+	"gorm.io/gorm"
 )
 
 type Option struct {
@@ -106,16 +107,11 @@ func InitOptionMap() {
 	common.OptionMap["WaffoUnitPrice"] = strconv.FormatFloat(setting.WaffoUnitPrice, 'f', -1, 64)
 	common.OptionMap["WaffoMinTopUp"] = strconv.Itoa(setting.WaffoMinTopUp)
 	common.OptionMap["WaffoPayMethods"] = setting.WaffoPayMethods2JsonString()
-	common.OptionMap["WaffoPancakeEnabled"] = strconv.FormatBool(setting.WaffoPancakeEnabled)
-	common.OptionMap["WaffoPancakeSandbox"] = strconv.FormatBool(setting.WaffoPancakeSandbox)
 	common.OptionMap["WaffoPancakeMerchantID"] = setting.WaffoPancakeMerchantID
 	common.OptionMap["WaffoPancakePrivateKey"] = setting.WaffoPancakePrivateKey
-	common.OptionMap["WaffoPancakeWebhookPublicKey"] = setting.WaffoPancakeWebhookPublicKey
-	common.OptionMap["WaffoPancakeWebhookTestKey"] = setting.WaffoPancakeWebhookTestKey
 	common.OptionMap["WaffoPancakeStoreID"] = setting.WaffoPancakeStoreID
 	common.OptionMap["WaffoPancakeProductID"] = setting.WaffoPancakeProductID
 	common.OptionMap["WaffoPancakeReturnURL"] = setting.WaffoPancakeReturnURL
-	common.OptionMap["WaffoPancakeCurrency"] = setting.WaffoPancakeCurrency
 	common.OptionMap["WaffoPancakeUnitPrice"] = strconv.FormatFloat(setting.WaffoPancakeUnitPrice, 'f', -1, 64)
 	common.OptionMap["WaffoPancakeMinTopUp"] = strconv.Itoa(setting.WaffoPancakeMinTopUp)
 	common.OptionMap["TopupGroupRatio"] = common.TopupGroupRatio2JSONString()
@@ -234,6 +230,35 @@ func UpdateOption(key string, value string) error {
 	}
 	// Update OptionMap
 	return updateOptionMap(key, value)
+}
+
+// UpdateOptionsBulk persists multiple key/value pairs in one transaction,
+// then updates the in-memory option state after the transaction commits.
+func UpdateOptionsBulk(values map[string]string) error {
+	if len(values) == 0 {
+		return nil
+	}
+	if err := DB.Transaction(func(tx *gorm.DB) error {
+		for key, value := range values {
+			option := Option{Key: key}
+			if err := tx.FirstOrCreate(&option, Option{Key: key}).Error; err != nil {
+				return err
+			}
+			option.Value = value
+			if err := tx.Save(&option).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	for key, value := range values {
+		if err := updateOptionMap(key, value); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func updateOptionMap(key string, value string) (err error) {
@@ -446,26 +471,16 @@ func updateOptionMap(key string, value string) (err error) {
 		setting.WaffoUnitPrice, _ = strconv.ParseFloat(value, 64)
 	case "WaffoMinTopUp":
 		setting.WaffoMinTopUp, _ = strconv.Atoi(value)
-	case "WaffoPancakeEnabled":
-		setting.WaffoPancakeEnabled = value == "true"
-	case "WaffoPancakeSandbox":
-		setting.WaffoPancakeSandbox = value == "true"
 	case "WaffoPancakeMerchantID":
 		setting.WaffoPancakeMerchantID = value
 	case "WaffoPancakePrivateKey":
 		setting.WaffoPancakePrivateKey = value
-	case "WaffoPancakeWebhookPublicKey":
-		setting.WaffoPancakeWebhookPublicKey = value
-	case "WaffoPancakeWebhookTestKey":
-		setting.WaffoPancakeWebhookTestKey = value
 	case "WaffoPancakeStoreID":
 		setting.WaffoPancakeStoreID = value
 	case "WaffoPancakeProductID":
 		setting.WaffoPancakeProductID = value
 	case "WaffoPancakeReturnURL":
 		setting.WaffoPancakeReturnURL = value
-	case "WaffoPancakeCurrency":
-		setting.WaffoPancakeCurrency = value
 	case "WaffoPancakeUnitPrice":
 		setting.WaffoPancakeUnitPrice, _ = strconv.ParseFloat(value, 64)
 	case "WaffoPancakeMinTopUp":
