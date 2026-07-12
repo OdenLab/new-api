@@ -16,13 +16,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import * as z from 'zod'
-import type { Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { RotateCcw } from 'lucide-react'
 import { useRef } from 'react'
+import type { Resolver } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import * as z from 'zod'
+
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -42,14 +42,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
+import { api } from '@/lib/api'
+
 import { FormDirtyIndicator } from '../components/form-dirty-indicator'
 import { FormNavigationGuard } from '../components/form-navigation-guard'
+import {
+  SettingsForm,
+  SettingsFormGrid,
+  SettingsFormGridItem,
+} from '../components/settings-form-layout'
+import { SettingsPageFormActions } from '../components/settings-page-context'
 import { SettingsSection } from '../components/settings-section'
 import { useSettingsForm } from '../hooks/use-settings-form'
 import { useUpdateOption } from '../hooks/use-update-option'
-import { api } from '@/lib/api'
 
 const _systemInfoSchema = z.object({
   theme: z.object({
@@ -152,359 +159,392 @@ export function SystemInfoSection({ defaultValues }: SystemInfoSectionProps) {
       >,
       defaultValues: normalizedDefaults,
       onSubmit: async (_data, changedFields) => {
-        for (const [key, value] of Object.entries(changedFields)) {
+        // 主题切换会改变后端返回的前端产物，需放到最后处理：先更新其余设置项，
+        // 仅当它们全部成功后才提交主题切换，避免其它设置失败时就切换了主题，
+        // 导致用户停留或刷新到另一套前端不存在的路由而 404。
+        const entries = Object.entries(changedFields)
+        const themeEntry = entries.find(([key]) => key === 'theme.frontend')
+        const otherEntries = entries.filter(([key]) => key !== 'theme.frontend')
+
+        let allSucceeded = true
+        for (const [key, value] of otherEntries) {
           let v = normalizeValue(value)
           if (key === 'ServerAddress') {
             v = v.replace(/\/+$/, '')
           }
-          await updateOption.mutateAsync({
+          const res = await updateOption.mutateAsync({
             key,
             value: v,
           })
+          if (!res.success) {
+            allSucceeded = false
+          }
+        }
+        if (themeEntry && !allSucceeded) {
+          // Theme was not submitted; keep form state consistent with backend.
+          _data.theme.frontend = normalizedDefaults.theme.frontend
+          return
+        }
+        if (themeEntry && allSucceeded) {
+          const res = await updateOption.mutateAsync({
+            key: themeEntry[0],
+            value: normalizeValue(themeEntry[1]),
+          })
+          if (res.success) {
+            // 当前路由在另一套前端中并不存在，主题切换成功后重置到首页以避免 404。
+            // 延时用于让表单脏状态先清除（移除 beforeunload 拦截）并展示成功提示后再刷新；
+            // 使用 replace 让已失效的路由不进入历史，防止返回按钮再次触发 404。
+            setTimeout(() => {
+              window.location.replace('/')
+            }, 600)
+          } else {
+            // Theme update failed; revert to the last saved value.
+            _data.theme.frontend = normalizedDefaults.theme.frontend
+          }
         }
       },
     })
 
   async function handleBackgroundUpload(file: File) {
-    const fileName = file.name.toLowerCase()
-    if (
-      !fileName.endsWith('.jpg') &&
-      !fileName.endsWith('.jpeg') &&
-      !fileName.endsWith('.png') &&
-      !fileName.endsWith('.webp')
-    ) {
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
+    const maxUploadBytes = 8 * 1024 * 1024
+    if (!allowedTypes.has(file.type)) {
       toast.error(t('Only jpg/png/webp files are supported'))
       return
     }
-    const formData = new FormData()
-    formData.append('file', file)
-    const res = await api.post('/api/option/background/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-    if (!res.data?.success || !res.data?.data?.url) {
-      toast.error(res.data?.message || t('Upload failed'))
+    if (file.size <= 0 || file.size > maxUploadBytes) {
+      toast.error(t('The image must be no larger than 8 MB'))
       return
     }
-    const url = String(res.data.data.url)
-    form.setValue('CustomBackgroundURL', url, { shouldDirty: true })
-    toast.success(t('Background uploaded successfully'))
+
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      const res = await api.post('/api/option/background/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      if (!res.data?.success || !res.data?.data?.url) {
+        toast.error(res.data?.message || t('Upload failed'))
+        return
+      }
+      const url = String(res.data.data.url)
+      form.setValue('CustomBackgroundURL', url, { shouldDirty: true })
+      toast.success(t('Background uploaded successfully'))
+    } catch {
+      toast.error(t('Upload failed'))
+    }
   }
 
   return (
     <>
       <FormNavigationGuard when={isDirty} />
 
-      <SettingsSection
-        title={t('System Information')}
-        description={t('Configure basic system information and branding')}
-      >
+      <SettingsSection title={t('System Information')}>
         <Form {...form}>
-          <form onSubmit={handleSubmit} className='space-y-6'>
+          <SettingsForm onSubmit={handleSubmit}>
+            <SettingsPageFormActions
+              onSave={handleSubmit}
+              onReset={handleReset}
+              isSaving={isSubmitting || updateOption.isPending}
+              isResetDisabled={!isDirty}
+            />
             <FormDirtyIndicator isDirty={isDirty} />
-            <FormField
-              control={form.control}
-              name='theme.frontend'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Frontend Theme')}</FormLabel>
-                  <Select
-                    items={[
-                      { value: 'default', label: t('Default (New Frontend)') },
-                      {
-                        value: 'classic',
-                        label: t('Classic (Legacy Frontend)'),
-                      },
-                    ]}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className='w-full'>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent alignItemWithTrigger={false}>
-                      <SelectGroup>
-                        <SelectItem value='default'>
-                          {t('Default (New Frontend)')}
-                        </SelectItem>
-                        <SelectItem value='classic'>
-                          {t('Classic (Legacy Frontend)')}
-                        </SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    {t(
-                      'Switch between the new frontend and the classic frontend. Changes take effect after page reload.'
-                    )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='SystemName'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('System Name')}</FormLabel>
-                  <FormControl>
-                    <Input placeholder={t('New API')} {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    {t('The name displayed across the application')}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='ServerAddress'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Server Address')}</FormLabel>
-                  <FormControl>
-                    <Input placeholder='https://yourdomain.com' {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    {t(
-                      'The public URL of your server, used for OAuth callbacks, webhooks, and other external integrations'
-                    )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='Logo'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Logo URL')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={t('https://example.com/logo.png')}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t('URL to your logo image (optional)')}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='EnableCustomBackground'
-              render={({ field }) => (
-                <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
-                  <div className='space-y-0.5'>
-                    <FormLabel>{t('Enable custom background')}</FormLabel>
-                    <FormDescription>
-                      {t('Use a public image URL as the sign-in page background')}
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='CustomBackgroundURL'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Custom background URL')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={t('https://example.com/background.webp')}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t(
-                      'Supports jpg/png/webp. Use a public URL accessible without login.'
-                    )}
-                  </FormDescription>
-                  <div className='mt-2 flex items-center gap-2'>
-                    <input
-                      ref={uploadInputRef}
-                      type='file'
-                      accept='.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'
-                      className='hidden'
-                      onChange={(event) => {
-                        const selectedFile = event.target.files?.[0]
-                        if (selectedFile) {
-                          void handleBackgroundUpload(selectedFile)
-                        }
-                        event.target.value = ''
-                      }}
-                    />
-                    <Button
-                      type='button'
-                      variant='outline'
-                      onClick={() => uploadInputRef.current?.click()}
+            <SettingsFormGrid>
+              <FormField
+                control={form.control}
+                name='theme.frontend'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Frontend Theme')}</FormLabel>
+                    <Select
+                      items={[
+                        {
+                          value: 'default',
+                          label: t('Default (New Frontend)'),
+                        },
+                        {
+                          value: 'classic',
+                          label: t('Classic (Legacy Frontend)'),
+                        },
+                      ]}
+                      onValueChange={field.onChange}
+                      value={field.value}
                     >
-                      {t('Upload background image')}
-                    </Button>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name='Footer'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Footer')}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder={t(
-                        '© 2025 Your Company. All rights reserved.'
+                      <FormControl>
+                        <SelectTrigger className='w-full'>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent alignItemWithTrigger={false}>
+                        <SelectGroup>
+                          <SelectItem value='default'>
+                            {t('Default (New Frontend)')}
+                          </SelectItem>
+                          <SelectItem value='classic'>
+                            {t('Classic (Legacy Frontend)')}
+                          </SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      {t(
+                        'Switch between the new frontend and the classic frontend. Changes take effect after page reload.'
                       )}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t('Footer text displayed at the bottom of pages')}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name='About'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('About')}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder={t(
-                        'Enter HTML code (e.g., <p>About us...</p>) or a URL (e.g., https://example.com) to embed as iframe'
+              <FormField
+                control={form.control}
+                name='SystemName'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('System Name')}</FormLabel>
+                    <FormControl>
+                      <Input placeholder={t('New API')} {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      {t('The name displayed across the application')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='ServerAddress'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Server Address')}</FormLabel>
+                    <FormControl>
+                      <Input placeholder='https://yourdomain.com' {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      {t(
+                        'The public URL of your server, used for OAuth callbacks, webhooks, and other external integrations'
                       )}
-                      rows={4}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t(
-                      'Supports HTML markup or iframe embedding. Enter HTML code directly, or provide a complete URL to automatically embed it as an iframe.'
-                    )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name='HomePageContent'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Home Page Content')}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder={t('Welcome to our New API...')}
-                      rows={6}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t(
-                      'Content displayed on the home page (supports Markdown)'
-                    )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name='Logo'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Logo URL')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={t('https://example.com/logo.png')}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('URL to your logo image (optional)')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name='legal.user_agreement'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('User Agreement')}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder={t(
-                        'Provide Markdown, HTML, or an external URL for the user agreement'
+              <FormField
+                control={form.control}
+                name='EnableCustomBackground'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
+                    <div className='space-y-0.5'>
+                      <FormLabel>{t('Enable custom background')}</FormLabel>
+                      <FormDescription>
+                        {t(
+                          'Use a public image URL as the sign-in page background'
+                        )}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='CustomBackgroundURL'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Custom background URL')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={t('https://example.com/background.webp')}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t(
+                        'Supports jpg/png/webp. Use a public URL accessible without login.'
                       )}
-                      rows={6}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t(
-                      'Leave empty to disable the agreement requirement. Supports Markdown, HTML, or a full URL to redirect users.'
-                    )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    </FormDescription>
+                    <div className='mt-2 flex items-center gap-2'>
+                      <input
+                        ref={uploadInputRef}
+                        type='file'
+                        accept='.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'
+                        className='hidden'
+                        onChange={(event) => {
+                          const selectedFile = event.target.files?.[0]
+                          if (selectedFile) {
+                            void handleBackgroundUpload(selectedFile)
+                          }
+                          event.target.value = ''
+                        }}
+                      />
+                      <Button
+                        type='button'
+                        variant='outline'
+                        onClick={() => uploadInputRef.current?.click()}
+                      >
+                        {t('Upload background image')}
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name='legal.privacy_policy'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('Privacy Policy')}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder={t(
-                        'Provide Markdown, HTML, or an external URL for the privacy policy'
+              <FormField
+                control={form.control}
+                name='Footer'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Footer')}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t(
+                          '© 2025 Your Company. All rights reserved.'
+                        )}
+                        rows={4}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Footer text displayed at the bottom of pages')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='About'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('About')}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t(
+                          'Enter HTML code (e.g., <p>About us...</p>) or a URL (e.g., https://example.com) to embed as iframe'
+                        )}
+                        rows={4}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t(
+                        'Supports HTML markup or iframe embedding. Enter HTML code directly, or provide a complete URL to automatically embed it as an iframe.'
                       )}
-                      rows={6}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {t(
-                      'Leave empty to disable the privacy policy requirement. Supports Markdown, HTML, or a full URL to redirect users.'
-                    )}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className='flex gap-2'>
-              <Button
-                type='submit'
-                disabled={isSubmitting || updateOption.isPending}
-              >
-                {updateOption.isPending ? t('Saving...') : t('Save Changes')}
-              </Button>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={handleReset}
-                disabled={!isDirty || updateOption.isPending || isSubmitting}
-              >
-                <RotateCcw className='mr-2 h-4 w-4' />
-                {t('Reset')}
-              </Button>
-            </div>
-          </form>
+              <SettingsFormGridItem span='full'>
+                <FormField
+                  control={form.control}
+                  name='HomePageContent'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Home Page Content')}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder={t('Welcome to our New API...')}
+                          rows={6}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t(
+                          'Content displayed on the home page (supports Markdown)'
+                        )}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </SettingsFormGridItem>
+
+              <FormField
+                control={form.control}
+                name='legal.user_agreement'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('User Agreement')}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t(
+                          'Provide Markdown, HTML, or an external URL for the user agreement'
+                        )}
+                        rows={6}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t(
+                        'Leave empty to disable the agreement requirement. Supports Markdown, HTML, or a full URL to redirect users.'
+                      )}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='legal.privacy_policy'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Privacy Policy')}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t(
+                          'Provide Markdown, HTML, or an external URL for the privacy policy'
+                        )}
+                        rows={6}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t(
+                        'Leave empty to disable the privacy policy requirement. Supports Markdown, HTML, or a full URL to redirect users.'
+                      )}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </SettingsFormGrid>
+          </SettingsForm>
         </Form>
       </SettingsSection>
     </>

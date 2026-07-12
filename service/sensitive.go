@@ -2,15 +2,11 @@ package service
 
 import (
 	"errors"
-	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/setting"
 )
-
-var sensitiveRegexCache sync.Map
 
 func CheckSensitiveMessages(messages []dto.Message) ([]string, error) {
 	if len(messages) == 0 {
@@ -41,32 +37,20 @@ func CheckSensitiveText(text string) (bool, []string) {
 }
 
 func CheckSensitiveOutputRegex(text string) (bool, []string, error) {
-	if !setting.ShouldCheckOutputSensitive() || len(setting.SensitiveOutputRegexRules) == 0 || text == "" {
+	if !setting.ShouldCheckOutputSensitive() || text == "" {
+		return false, nil, nil
+	}
+	rules := setting.GetCompiledSensitiveOutputRegexRules()
+	if len(rules) == 0 {
 		return false, nil, nil
 	}
 	matched := make([]string, 0, 2)
-	for _, rule := range setting.SensitiveOutputRegexRules {
-		re, err := compileSensitiveRegex(rule)
-		if err != nil {
-			return false, nil, err
-		}
-		if re.MatchString(text) {
-			matched = append(matched, rule)
+	for _, rule := range rules {
+		if rule.Regex.MatchString(text) {
+			matched = append(matched, rule.Pattern)
 		}
 	}
 	return len(matched) > 0, matched, nil
-}
-
-func compileSensitiveRegex(rule string) (*regexp.Regexp, error) {
-	if value, ok := sensitiveRegexCache.Load(rule); ok {
-		return value.(*regexp.Regexp), nil
-	}
-	re, err := regexp.Compile(rule)
-	if err != nil {
-		return nil, err
-	}
-	sensitiveRegexCache.Store(rule, re)
-	return re, nil
 }
 
 // SensitiveWordContains 是否包含敏感词，返回是否包含敏感词和敏感词列表

@@ -59,10 +59,10 @@ func OaiResponsesToChatHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 	if oaiError := responsesResp.GetOpenAIError(); oaiError != nil && oaiError.Type != "" {
 		return nil, types.WithOpenAIError(*oaiError, resp.StatusCode)
 	}
-	if matched, rules, regexErr := service.CheckSensitiveOutputRegex(service.ExtractOutputTextFromResponses(&responsesResp)); regexErr != nil {
+	if matched, _, regexErr := service.CheckSensitiveOutputRegex(service.ExtractOutputTextFromResponses(&responsesResp)); regexErr != nil {
 		return nil, types.NewError(regexErr, types.ErrorCodeSensitiveWordsDetected)
 	} else if matched {
-		return nil, types.NewError(fmt.Errorf("sensitive output regex matched: %s", strings.Join(rules, ", ")), types.ErrorCodeSensitiveWordsDetected)
+		return nil, types.NewError(fmt.Errorf("response blocked by sensitive content policy"), types.ErrorCodeSensitiveWordsDetected)
 	}
 
 	chatId := helper.GetResponseID(c)
@@ -381,11 +381,11 @@ func OaiResponsesToChatStreamHandler(c *gin.Context, info *relaycommon.RelayInfo
 
 			if streamResp.Delta != "" {
 				currentText := outputText.String() + streamResp.Delta
-				if matched, rules, regexErr := service.CheckSensitiveOutputRegex(currentText); regexErr != nil {
+				if matched, _, regexErr := service.CheckSensitiveOutputRegex(currentText); regexErr != nil {
 					sr.Stop(regexErr)
 					return
 				} else if matched {
-					sr.Stop(fmt.Errorf("sensitive output regex matched: %s", strings.Join(rules, ", ")))
+					sr.Stop(fmt.Errorf("response blocked by sensitive content policy"))
 					return
 				}
 				outputText.WriteString(streamResp.Delta)
