@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { api } from '@/lib/api'
-import { buildQueryParams } from './lib/utils'
+
 import type {
   GetLogsParams,
   GetLogsResponse,
@@ -27,6 +27,16 @@ import type {
   GetTaskLogsParams,
   UserInfo,
 } from './types'
+
+function buildQueryParams(params: Record<string, unknown>): URLSearchParams {
+  const queryParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, String(value))
+    }
+  }
+  return queryParams
+}
 
 // ============================================================================
 // Generic API Helpers
@@ -91,7 +101,7 @@ export async function getUserInfo(
 }
 
 // ============================================================================
-// Midjourney (Drawing) Logs API
+// MjProxy (Drawing) Logs API
 // ============================================================================
 
 export const getAllMidjourneyLogs = (params: GetMidjourneyLogsParams) =>
@@ -116,6 +126,8 @@ export async function getConversationLogs(params: {
   username?: string
   token_name?: string
   model_name?: string
+  start_time?: number
+  end_time?: number
 }) {
   const queryParams = buildQueryParams({
     p: params.p || 1,

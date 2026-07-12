@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -41,10 +40,10 @@ func GeminiTextGenerationHandler(c *gin.Context, info *relaycommon.RelayInfo, re
 		common.SetContextKey(c, constant.ContextKeyAdminRejectReason, fmt.Sprintf("gemini_block_reason=%s", *geminiResponse.PromptFeedback.BlockReason))
 	}
 	responseText := extractTextFromGeminiResponse(&geminiResponse)
-	if matched, rules, regexErr := service.CheckSensitiveOutputRegex(responseText); regexErr != nil {
+	if matched, _, regexErr := service.CheckSensitiveOutputRegex(responseText); regexErr != nil {
 		return nil, types.NewError(regexErr, types.ErrorCodeSensitiveWordsDetected)
 	} else if matched {
-		return nil, types.NewError(fmt.Errorf("sensitive output regex matched: %s", strings.Join(rules, ", ")), types.ErrorCodeSensitiveWordsDetected)
+		return nil, types.NewError(fmt.Errorf("response blocked by sensitive content policy"), types.ErrorCodeSensitiveWordsDetected)
 	}
 
 	// 计算使用量（基于 UsageMetadata）

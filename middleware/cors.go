@@ -12,10 +12,11 @@ func CORS() gin.HandlerFunc {
 	config.AllowCredentials = true
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	config.AllowHeaders = []string{"*"}
+	config.ExposeHeaders = []string{"X-Resume-Id", "X-Request-Id", "X-New-Api-Version"}
 	return cors.New(config)
 }
 
-func PoweredBy() gin.HandlerFunc {
+func Version() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("X-New-Api-Version", common.Version)
 		c.Next()

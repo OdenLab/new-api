@@ -16,24 +16,25 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useEffect } from 'react'
-import { type QueryClient } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import {
   createRootRouteWithContext,
   Outlet,
   redirect,
 } from '@tanstack/react-router'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-import { ThemeCustomizationProvider } from '@/context/theme-customization-provider'
-import { useSystemConfig } from '@/hooks/use-system-config'
-import { useStatus } from '@/hooks/use-status'
-import { Toaster } from '@/components/ui/sonner'
+import { useEffect } from 'react'
+
 import { NavigationProgress } from '@/components/navigation-progress'
+import { Toaster } from '@/components/ui/sonner'
+import { ThemeCustomizationProvider } from '@/context/theme-customization-provider'
+import { saveAffiliateCode } from '@/features/auth/lib/storage'
 import { GeneralError } from '@/features/errors/general-error'
 import { NotFoundError } from '@/features/errors/not-found-error'
 import { getSetupStatus } from '@/features/setup/api'
-import { saveAffiliateCode } from '@/features/auth/lib/storage'
+import { useStatus } from '@/hooks/use-status'
+import { useSystemConfig } from '@/hooks/use-system-config'
 
 function RootComponent() {
   // Load system configuration (logo, system name, etc.) from backend
@@ -81,7 +82,7 @@ function RootComponent() {
               loading='eager'
               decoding='async'
             />
-            <div className='from-background/72 via-background/58 to-background/72 absolute inset-0 bg-linear-to-br md:from-background/64 md:via-background/50 md:to-background/68' />
+            <div className='from-background/72 via-background/58 to-background/72 md:from-background/64 md:via-background/50 md:to-background/68 absolute inset-0 bg-linear-to-br' />
           </div>
         )}
         <div className='relative z-10'>
@@ -89,7 +90,7 @@ function RootComponent() {
           <Outlet />
         </div>
       </div>
-      <Toaster duration={5000} />
+      <Toaster closeButton duration={5000} position='top-center' richColors />
       {import.meta.env.MODE === 'development' && (
         <>
           <ReactQueryDevtools buttonPosition='bottom-left' />

@@ -40,10 +40,10 @@ func OaiResponsesHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 		c.Set("image_generation_call_quality", responsesResponse.GetQuality())
 		c.Set("image_generation_call_size", responsesResponse.GetSize())
 	}
-	if matched, rules, regexErr := service.CheckSensitiveOutputRegex(service.ExtractOutputTextFromResponses(&responsesResponse)); regexErr != nil {
+	if matched, _, regexErr := service.CheckSensitiveOutputRegex(service.ExtractOutputTextFromResponses(&responsesResponse)); regexErr != nil {
 		return nil, types.NewError(regexErr, types.ErrorCodeSensitiveWordsDetected)
 	} else if matched {
-		return nil, types.NewError(fmt.Errorf("sensitive output regex matched: %s", strings.Join(rules, ", ")), types.ErrorCodeSensitiveWordsDetected)
+		return nil, types.NewError(fmt.Errorf("response blocked by sensitive content policy"), types.ErrorCodeSensitiveWordsDetected)
 	}
 
 	// 写入新的 response body
@@ -130,11 +130,11 @@ func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 			}
 		case "response.output_text.delta":
 			currentText := responseTextBuilder.String() + streamResponse.Delta
-			if matched, rules, regexErr := service.CheckSensitiveOutputRegex(currentText); regexErr != nil {
+			if matched, _, regexErr := service.CheckSensitiveOutputRegex(currentText); regexErr != nil {
 				sr.Stop(regexErr)
 				return
 			} else if matched {
-				sr.Stop(fmt.Errorf("sensitive output regex matched: %s", strings.Join(rules, ", ")))
+				sr.Stop(fmt.Errorf("response blocked by sensitive content policy"))
 				return
 			}
 			responseTextBuilder.WriteString(streamResponse.Delta)

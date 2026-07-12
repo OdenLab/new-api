@@ -18,9 +18,10 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useSystemConfig } from '@/hooks/use-system-config'
-import { useStatus } from '@/hooks/use-status'
+
 import { Skeleton } from '@/components/ui/skeleton'
+import { useStatus } from '@/hooks/use-status'
+import { useSystemConfig } from '@/hooks/use-system-config'
 
 type AuthLayoutProps = {
   children: React.ReactNode
@@ -48,7 +49,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             loading='eager'
             decoding='async'
           />
-          <div className='from-background/72 via-background/55 to-background/78 absolute inset-0 bg-linear-to-b sm:from-background/70 sm:to-background/72' />
+          <div className='from-background/72 via-background/55 to-background/78 sm:from-background/70 sm:to-background/72 absolute inset-0 bg-linear-to-b' />
         </>
       )}
       <Link
@@ -72,7 +73,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           <h1 className='text-xl font-medium'>{systemName}</h1>
         )}
       </Link>
-      <div className='container relative z-10 flex items-center pt-16 sm:pt-0'>
+      <div className='relative z-10 container flex items-center pt-16 sm:pt-0'>
         <div className='bg-background/78 border-border/55 shadow-primary/5 mx-auto flex w-full flex-col justify-center space-y-2 rounded-2xl border px-4 py-8 shadow-xl backdrop-blur-md sm:w-[480px] sm:p-8'>
           {children}
         </div>

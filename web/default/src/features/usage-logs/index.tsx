@@ -16,22 +16,24 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useCallback, useMemo } from 'react'
 import { getRouteApi, useNavigate } from '@tanstack/react-router'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSidebarConfig } from '@/hooks/use-sidebar-config'
-import { useIsAdmin } from '@/hooks/use-admin'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
 import { SectionPageLayout } from '@/components/layout'
 import type { NavGroup } from '@/components/layout/types'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CacheStatsDialog } from '@/features/system-settings/general/channel-affinity/cache-stats-dialog'
+import { useIsAdmin } from '@/hooks/use-admin'
+import { useSidebarConfig } from '@/hooks/use-sidebar-config'
+
+import { ConversationLogsPanel } from './components/conversation-logs-panel'
 import { UserInfoDialog } from './components/dialogs/user-info-dialog'
 import {
   UsageLogsProvider,
   useUsageLogsContext,
 } from './components/usage-logs-provider'
 import { UsageLogsTable } from './components/usage-logs-table'
-import { ConversationLogsPanel } from './components/conversation-logs-panel'
 import {
   isUsageLogsSectionId,
   USAGE_LOGS_DEFAULT_SECTION,
@@ -41,25 +43,18 @@ import {
 const route = getRouteApi('/_authenticated/usage-logs/$section')
 const TASK_LOG_SECTIONS = ['drawing', 'task'] as const
 
-const SECTION_META: Record<
-  UsageLogsSectionId,
-  { titleKey: string; descriptionKey: string }
-> = {
+const SECTION_META: Record<UsageLogsSectionId, { titleKey: string }> = {
   common: {
     titleKey: 'Common Logs',
-    descriptionKey: 'View and manage your API usage logs',
   },
   conversation: {
     titleKey: 'Conversation Logs',
-    descriptionKey: 'View prompt and response history by user and key',
   },
   drawing: {
     titleKey: 'Drawing Logs',
-    descriptionKey: 'View and manage your drawing logs',
   },
   task: {
     titleKey: 'Task Logs',
-    descriptionKey: 'View and manage your task logs',
   },
 }
 
@@ -110,18 +105,21 @@ function UsageLogsContent() {
     [isAdmin]
   )
   const filteredTabGroups = useSidebarConfig(tabNavGroups)
-  const visibleSections = useMemo(
-    () =>
-      (filteredTabGroups[0]?.items ?? [])
-        .map((item) => {
-          if (!('url' in item) || typeof item.url !== 'string') return null
-          return item.url.split('/').pop() ?? null
-        })
-        .filter((section): section is UsageLogsSectionId =>
-          Boolean(section && isUsageLogsSectionId(section))
-        ),
-    [filteredTabGroups]
-  )
+  const visibleSections = useMemo(() => {
+    const groupIndex = TASK_LOG_SECTIONS.includes(
+      activeCategory as (typeof TASK_LOG_SECTIONS)[number]
+    )
+      ? 1
+      : 0
+    return (filteredTabGroups[groupIndex]?.items ?? [])
+      .map((item) => {
+        if (!('url' in item) || typeof item.url !== 'string') return null
+        return item.url.split('/').pop() ?? null
+      })
+      .filter((section): section is UsageLogsSectionId =>
+        Boolean(section && isUsageLogsSectionId(section))
+      )
+  }, [activeCategory, filteredTabGroups])
 
   const handleSectionChange = useCallback(
     (section: string) => {
@@ -138,40 +136,30 @@ function UsageLogsContent() {
 
   return (
     <>
-      <SectionPageLayout>
+      <SectionPageLayout fixedContent>
         <SectionPageLayout.Title>
           {t(pageMeta.titleKey)}
         </SectionPageLayout.Title>
-        <SectionPageLayout.Description>
-          {t(pageMeta.descriptionKey)}
-        </SectionPageLayout.Description>
         <SectionPageLayout.Content>
-          <div className='space-y-4'>
-            <div className='from-background/70 to-background/55 rounded-2xl border bg-linear-to-br p-3 shadow-sm backdrop-blur-md'>
-              <div className='text-muted-foreground mb-2 text-xs font-medium tracking-wide'>
-                {t('Log workspace')}
-              </div>
+          <div className='flex h-full min-h-0 flex-col gap-4'>
             {showSectionSwitcher && (
               <Tabs value={activeCategory} onValueChange={handleSectionChange}>
-                <TabsList className='bg-muted/60 group-data-horizontal/tabs:h-auto max-w-full flex-wrap justify-start rounded-xl border p-1 shadow-sm backdrop-blur-sm'>
+                <TabsList className='max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto'>
                   {visibleSections.map((section) => (
-                    <TabsTrigger
-                      key={section}
-                      value={section}
-                      className='data-[state=active]:shadow-xs rounded-lg'
-                    >
+                    <TabsTrigger key={section} value={section}>
                       {t(SECTION_META[section].titleKey)}
                     </TabsTrigger>
                   ))}
                 </TabsList>
               </Tabs>
             )}
+            <div className='min-h-0 flex-1'>
+              {activeCategory === 'conversation' ? (
+                <ConversationLogsPanel />
+              ) : (
+                <UsageLogsTable logCategory={activeCategory} />
+              )}
             </div>
-            {activeCategory === 'conversation' ? (
-              <ConversationLogsPanel />
-            ) : (
-              <UsageLogsTable logCategory={activeCategory} />
-            )}
           </div>
         </SectionPageLayout.Content>
       </SectionPageLayout>

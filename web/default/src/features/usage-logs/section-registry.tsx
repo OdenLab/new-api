@@ -25,7 +25,6 @@ const USAGE_LOGS_SECTIONS = [
   {
     id: 'common',
     titleKey: 'Common Logs',
-    descriptionKey: 'View and manage your API usage logs',
     build: () => null, // Content is rendered directly in the page component
   },
   {
@@ -37,13 +36,11 @@ const USAGE_LOGS_SECTIONS = [
   {
     id: 'drawing',
     titleKey: 'Drawing Logs',
-    descriptionKey: 'View and manage your drawing logs',
     build: () => null, // Content is rendered directly in the page component
   },
   {
     id: 'task',
     titleKey: 'Task Logs',
-    descriptionKey: 'View and manage your task logs',
     build: () => null, // Content is rendered directly in the page component
   },
 ] as const
