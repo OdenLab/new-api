@@ -56,7 +56,7 @@ func InitConversationLogDB() error {
 		}
 		CONV_LOG_DB = db
 	} else {
-		db, err := chooseDB("CONV_LOG_SQL_DSN", true)
+		db, _, err := chooseDB("CONV_LOG_SQL_DSN", true)
 		if err != nil {
 			return err
 		}
